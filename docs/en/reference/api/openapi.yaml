@@ -1,0 +1,543 @@
+openapi: 3.0.3
+info:
+  title: RestoKit API Documentation
+  version: 1.0.0
+  description: API covering authentication, order management, delivery, kitchen operations, partners, and inventory.
+
+tags:
+  - name: Auth
+    description: User authentication and management
+  - name: Delivery
+    description: Management of delivery zones and time slots
+  - name: Kitchen
+    description: Management of orders for kitchen staff
+  - name: Orders
+    description: User order management
+  - name: Partners
+    description: Supplier partner management
+  - name: Stock
+    description: Inventory item management
+
+paths:
+
+  /auth/login:
+    post:
+      summary: Login
+      description: >
+        Authenticates a user using their email and password.  
+        Returns a JWT token to be used in subsequent requests.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: JWT Token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+        '400':
+          description: Invalid request
+        '401':
+          description: Invalid credentials
+      security: []  # No token required for login
+
+  /auth/logout:
+    post:
+      summary: Logout
+      description: >
+        Revokes the current JWT token.  
+        The user is logged out and the token becomes invalid.
+      tags:
+        - Auth
+      responses:
+        '204':
+          description: Successful logout (no content)
+
+  /auth/me:
+    get:
+      summary: User profile
+      description: >
+        Returns information about the currently authenticated account.
+      tags:
+        - Auth
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 123
+                  email:
+                    type: string
+                    format: email
+                  roles:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          description: Missing or invalid token
+
+  /delivery/zones:
+    get:
+      summary: Delivery zones
+      description: >
+        Returns a list of delivery zones with the associated fees.
+      tags:
+        - Delivery
+      responses:
+        '200':
+          description: List of available zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: Central Paris
+                    fee:
+                      type: number
+                      format: float
+                      example: 5.0
+        '401':
+          description: Missing or invalid token
+        '500':
+          description: Internal server error
+
+  /delivery/schedule:
+    post:
+      summary: Book a delivery slot
+      description: >
+        Allows the user to book a time slot for delivery in a given zone.
+      tags:
+        - Delivery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - zone_id
+                - datetime
+              properties:
+                zone_id:
+                  type: integer
+                  example: 1
+                datetime:
+                  type: string
+                  format: date-time
+                  example: "2025-05-20T12:30:00"
+      responses:
+        '200':
+          description: Slot booked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Slot booked
+        '400':
+          description: Invalid request (invalid zone_id or datetime)
+        '401':
+          description: Invalid or expired token
+        '409':
+          description: Slot already booked or unavailable
+
+  /kitchen/orders:
+    get:
+      summary: Ongoing orders
+      description: >
+        Retrieves a list of active orders, ready to be prepared or being prepared.
+      tags:
+        - Kitchen
+      responses:
+        '200':
+          description: List of current orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    order_id:
+                      type: integer
+                      example: 101
+                    table:
+                      type: integer
+                      example: 5
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            example: Chicken Yassa
+                          qty:
+                            type: integer
+                            example: 2
+                    status:
+                      type: string
+                      enum: [in preparation, ready, served]
+                      example: in preparation
+        '401':
+          description: Unauthorized access
+        '500':
+          description: Server error
+
+  /kitchen/orders/{order_id}:
+    patch:
+      summary: Update order status
+      description: >
+        Updates the status of a specific order (e.g. `ready`, `served`).
+      tags:
+        - Kitchen
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 101
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [in preparation, ready, served]
+                  example: ready
+      responses:
+        '200':
+          description: Update confirmed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  order_id:
+                    type: integer
+                    example: 101
+                  status:
+                    type: string
+                    example: ready
+        '400':
+          description: Invalid `status` field
+        '404':
+          description: Order not found
+        '401':
+          description: Invalid token
+
+  /orders:
+    get:
+      summary: User's order list
+      description: >
+        Retrieves all past orders placed by the authenticated user.
+      tags:
+        - Orders
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1001
+                    status:
+                      type: string
+                      example: in progress
+                    total:
+                      type: number
+                      format: float
+                      example: 45.50
+                    created_at:
+                      type: string
+                      format: date-time
+                      example: "2025-05-15T11:30:00"
+        '401':
+          description: Unauthorized access
+        '500':
+          description: Internal server error
+    post:
+      summary: Create an order
+      description: >
+        Creates a new order from a cart and a delivery address.
+      tags:
+        - Orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+                - delivery_type
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - menu_id
+                      - qty
+                    properties:
+                      menu_id:
+                        type: integer
+                        example: 5
+                      qty:
+                        type: integer
+                        example: 2
+                delivery_type:
+                  type: string
+                  enum: [delivery, pickup]
+                  example: delivery
+                address_id:
+                  type: integer
+                  example: 12
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    order_id:
+                      type: integer
+                      example: 1002
+                    status:
+                      type: string
+                      example: in progress
+        '400':
+          description: Missing or invalid data
+        '401':
+          description: Unauthorized
+
+  /partners:
+    get:
+      summary: List of partners
+      description: >
+        Retrieves all registered partners (suppliers, producers, etc.).
+      tags:
+        - Partners
+      responses:
+        '200':
+          description: List of partners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: Supplier A
+                    contact:
+                      type: string
+                      format: email
+                      example: contact@suppliera.com
+        '401':
+          description: Missing or invalid token
+        '500':
+          description: Server error
+      security:
+        - bearerAuth: []
+
+    post:
+      summary: Add a partner
+      description: >
+        Adds a new partner to the database (via admin or back office).
+      tags:
+        - Partners
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - contact
+              properties:
+                name:
+                  type: string
+                  example: New Partner
+                contact:
+                  type: string
+                  format: email
+                  example: contact@new.com
+      responses:
+        '201':
+          description: Partner added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 2
+                  name:
+                    type: string
+                    example: New Partner
+        '400':
+          description: Missing or invalid field
+        '401':
+          description: User not authenticated
+        '409':
+          description: Partner already exists
+      security:
+        - bearerAuth: []
+
+  /stock/items:
+    get:
+      summary: Stock item list
+      description: >
+        Returns the current inventory with available quantities for each item.
+      tags:
+        - Stock
+      responses:
+        '200':
+          description: Stock item list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    item_id:
+                      type: integer
+                      example: 101
+                    name:
+                      type: string
+                      example: White rice
+                    quantity:
+                      type: number
+                      example: 50
+                    unit:
+                      type: string
+                      example: kg
+        '401':
+          description: Access without valid token
+        '500':
+          description: Server issue
+      security:
+        - bearerAuth: []
+
+  /stock/items/{item_id}:
+    patch:
+      summary: Update an item
+      description: >
+        Allows updating the quantity of a specific item in inventory.
+      tags:
+        - Stock
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the item to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quantity
+              properties:
+                quantity:
+                  type: number
+                  example: 45
+      responses:
+        '200':
+          description: Quantity updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  item_id:
+                    type: integer
+                    example: 101
+                  quantity:
+                    type: number
+                    example: 45
+        '400':
+          description: Missing or invalid data
+        '404':
+          description: Item not found
+        '401':
+          description: Access denied
+      security:
+        - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

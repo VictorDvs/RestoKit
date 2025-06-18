@@ -1,0 +1,543 @@
+openapi: 3.0.3
+info:
+  title: Documentation API RestoKit
+  version: 1.0.0
+  description: API regroupant l’authentification, la gestion des commandes, livraison, cuisine, partenaires et stock.
+
+tags:
+  - name: Auth
+    description: Authentification et gestion des utilisateurs
+  - name: Livraison
+    description: Gestion des zones et créneaux de livraison
+  - name: Cuisine
+    description: Gestion des commandes côté cuisine
+  - name: Commandes
+    description: Gestion des commandes utilisateurs
+  - name: Partenaires
+    description: Gestion des partenaires fournisseurs
+  - name: Stock
+    description: Gestion des articles en stock
+
+paths:
+
+  /auth/login:
+    post:
+      summary: Connexion
+      description: >
+        Authentifie un utilisateur avec son email et son mot de passe.  
+        Retourne un token JWT à utiliser dans les requêtes suivantes.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Token JWT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+        '400':
+          description: Requête invalide
+        '401':
+          description: Identifiants invalides
+      security: []  # Pas de token nécessaire pour login
+
+  /auth/logout:
+    post:
+      summary: Déconnexion
+      description: >
+        Révoque le token JWT courant.  
+        L'utilisateur est déconnecté et le token devient invalide.
+      tags:
+        - Auth
+      responses:
+        '204':
+          description: Déconnexion réussie (aucun contenu)
+
+  /auth/me:
+    get:
+      summary: Profil utilisateur
+      description: >
+        Retourne les informations du compte actuellement authentifié.
+      tags:
+        - Auth
+      responses:
+        '200':
+          description: Informations de l'utilisateur
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 123
+                  email:
+                    type: string
+                    format: email
+                  roles:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          description: Token absent ou invalide
+
+  /delivery/zones:
+    get:
+      summary: Zones de livraison
+      description: >
+        Retourne la liste des zones où la livraison est disponible, avec les frais associés.
+      tags:
+        - Livraison
+      responses:
+        '200':
+          description: Liste des zones disponibles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: Paris centre
+                    fee:
+                      type: number
+                      format: float
+                      example: 5.0
+        '401':
+          description: Token manquant ou invalide
+        '500':
+          description: Erreur interne
+
+  /delivery/schedule:
+    post:
+      summary: Réserver un créneau
+      description: >
+        Permet à l'utilisateur de réserver un créneau horaire pour une livraison dans une zone donnée.
+      tags:
+        - Livraison
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - zone_id
+                - datetime
+              properties:
+                zone_id:
+                  type: integer
+                  example: 1
+                datetime:
+                  type: string
+                  format: date-time
+                  example: "2025-05-20T12:30:00"
+      responses:
+        '200':
+          description: Créneau réservé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Créneau réservé
+        '400':
+          description: Requête invalide (zone_id ou datetime incorrect)
+        '401':
+          description: Token invalide ou expiré
+        '409':
+          description: Créneau déjà réservé ou indisponible
+
+  /kitchen/orders:
+    get:
+      summary: Commandes en cours
+      description: >
+        Récupère la liste des commandes actives, prêtes à être préparées ou en cours de préparation.
+      tags:
+        - Cuisine
+      responses:
+        '200':
+          description: Liste des commandes en cours
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    order_id:
+                      type: integer
+                      example: 101
+                    table:
+                      type: integer
+                      example: 5
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            example: Poulet Yassa
+                          qty:
+                            type: integer
+                            example: 2
+                    status:
+                      type: string
+                      enum: [en préparation, prête, servie]
+                      example: en préparation
+        '401':
+          description: Accès non autorisé
+        '500':
+          description: Erreur serveur
+
+  /kitchen/orders/{order_id}:
+    patch:
+      summary: Mise à jour du statut d'une commande
+      description: >
+        Met à jour le statut d'une commande spécifique (ex : `prête`, `servie`).
+      tags:
+        - Cuisine
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 101
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [en préparation, prête, servie]
+                  example: prête
+      responses:
+        '200':
+          description: Confirmation de mise à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  order_id:
+                    type: integer
+                    example: 101
+                  status:
+                    type: string
+                    example: prête
+        '400':
+          description: Champ `status` invalide
+        '404':
+          description: Commande introuvable
+        '401':
+          description: Token invalide
+
+  /orders:
+    get:
+      summary: Liste des commandes de l'utilisateur
+      description: >
+        Récupère toutes les commandes passées par l'utilisateur authentifié.
+      tags:
+        - Commandes
+      responses:
+        '200':
+          description: Liste des commandes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1001
+                    status:
+                      type: string
+                      example: en cours
+                    total:
+                      type: number
+                      format: float
+                      example: 45.50
+                    created_at:
+                      type: string
+                      format: date-time
+                      example: "2025-05-15T11:30:00"
+        '401':
+          description: Accès non autorisé
+        '500':
+          description: Erreur serveur interne
+    post:
+      summary: Créer une commande
+      description: >
+        Crée une nouvelle commande à partir d’un panier et d’une adresse de livraison.
+      tags:
+        - Commandes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+                - delivery_type
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - menu_id
+                      - qty
+                    properties:
+                      menu_id:
+                        type: integer
+                        example: 5
+                      qty:
+                        type: integer
+                        example: 2
+                delivery_type:
+                  type: string
+                  enum: [livraison, retrait]
+                  example: livraison
+                address_id:
+                  type: integer
+                  example: 12
+      responses:
+        '201':
+          description: Commande créée
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    order_id:
+                      type: integer
+                      example: 1002
+                    status:
+                      type: string
+                      example: en cours
+        '400':
+          description: Données manquantes ou invalides
+        '401':
+          description: Accès non autorisé
+
+  /partners:
+    get:
+      summary: Liste des partenaires
+      description: >
+        Récupère l’ensemble des partenaires enregistrés (fournisseurs, producteurs, etc.).
+      tags:
+        - Partenaires
+      responses:
+        '200':
+          description: Liste des partenaires
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: Fournisseur A
+                    contact:
+                      type: string
+                      format: email
+                      example: contact@fournisseura.com
+        '401':
+          description: Jeton manquant ou invalide
+        '500':
+          description: Problème serveur
+      security:
+        - bearerAuth: []
+
+    post:
+      summary: Ajouter un partenaire
+      description: >
+        Ajoute un nouveau partenaire à la base (via interface d’admin ou back-office).
+      tags:
+        - Partenaires
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - contact
+              properties:
+                name:
+                  type: string
+                  example: Nouveau Partenaire
+                contact:
+                  type: string
+                  format: email
+                  example: contact@nouveau.com
+      responses:
+        '201':
+          description: Partenaire ajouté
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 2
+                  name:
+                    type: string
+                    example: Nouveau Partenaire
+        '400':
+          description: Champ manquant ou invalide
+        '401':
+          description: Utilisateur non authentifié
+        '409':
+          description: Partenaire déjà existant
+      security:
+        - bearerAuth: []
+
+  /stock/items:
+    get:
+      summary: Liste des articles en stock
+      description: >
+        Retourne l’inventaire actuel avec les quantités disponibles pour chaque article.
+      tags:
+        - Stock
+      responses:
+        '200':
+          description: Liste des articles en stock
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    item_id:
+                      type: integer
+                      example: 101
+                    name:
+                      type: string
+                      example: Riz blanc
+                    quantity:
+                      type: number
+                      example: 50
+                    unit:
+                      type: string
+                      example: kg
+        '401':
+          description: Accès sans jeton valide
+        '500':
+          description: Problème serveur
+      security:
+        - bearerAuth: []
+
+  /stock/items/{item_id}:
+    patch:
+      summary: Mise à jour d’un article
+      description: >
+        Permet de mettre à jour la quantité d’un article spécifique dans l’inventaire.
+      tags:
+        - Stock
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'article à modifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quantity
+              properties:
+                quantity:
+                  type: number
+                  example: 45
+      responses:
+        '200':
+          description: Quantité mise à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  item_id:
+                    type: integer
+                    example: 101
+                  quantity:
+                    type: number
+                    example: 45
+        '400':
+          description: Donnée manquante ou invalide
+        '404':
+          description: Article introuvable
+        '401':
+          description: Accès refusé
+      security:
+        - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

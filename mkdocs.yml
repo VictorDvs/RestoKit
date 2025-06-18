@@ -1,0 +1,141 @@
+site_name: Documentation RestoKit SDK
+nav_translations:
+  Documentation RestoKit SDK: SDK RestoKit Documentation
+site_author: Victor De Vos
+site_description: >-
+  Utilisez RestoKit pour simplifier et automatiser vos process en restauration !
+theme:
+  name: material
+  language: fr
+  icon:
+    logo: material/food-croissant
+  font:
+    text: Noto Sans
+  features:
+    - header.autohide
+    - navigation.footer
+    - navigation.tabs
+    - navigation.top
+    - navigation.path
+    - navigation.indexes
+    - navigation.expand
+    - content.code.copy
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default 
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+extra_css:
+  - assets/css/custom.css
+copyright: Copyright &copy; 2025 Victor De Vos
+
+plugins:
+  - search
+  - swagger-ui
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: fr
+          default: true
+          name: Français
+          build: true
+          site_name: Documentation SDK Restokit
+        - locale: en
+          default: false
+          build: true
+          name: English
+          site_name: SDK RestoKit Documentation
+          nav_translations:
+            Introduction: Introduction
+            Bien démarrer: Getting Started
+            Démarrage rapide: Quick Start
+            Installation avancée: Advanced Installation
+            Pour les développeurs Python: For Python Developers
+            Pour les utilisateurs API: For API Users
+            Concepts clés: Core Concepts
+            Architecture de RestoKit: RestoKit Architecture
+            Authentification: Authentication
+            Gestion des erreurs: Error Handling
+            Référence: Reference
+            Référence API: API Reference
+            Guides pratiques: Practical Guides
+            Exemples d'utilisation: Usage Examples
+            Prendre une commande en ligne: Online Order
+            Mettre à jour le stock: Update Stock
+            Suivre une livraison: Real-Time Delivery Tracking
+            Intégration Postman: Postman Integration
+            Déploiement: Deployment
+            Démo locale: Local Demo
+            CI/CD avec GitHub Actions: CI/CD with GitHub Actions
+            À propos de RestoKit: About Restokit
+
+
+
+      
+
+extra: 
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/VictorDvs
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/victor2vos/
+
+
+markdown_extensions:
+  - admonition
+  - pymdownx.snippets
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+
+nav:
+  - Introduction: index.md
+  - Bien démarrer:
+      - Démarrage rapide: getting-started.md
+      - Installation avancée:
+          - Pour les développeurs Python: install/python.md
+          - Pour les utilisateurs API: install/api.md
+  - Concepts clés:
+      - Architecture de RestoKit: concepts/architecture.md
+      - Authentification: concepts/auth.md
+      - Gestion des erreurs: concepts/errors.md
+  - Guides pratiques:
+      - guides/index.md
+      - Exemples d'utilisation:
+          - Prendre une commande en ligne: guides/examples/create-order.md
+          - Mettre à jour le stock: guides/examples/update-stock.md
+          - Suivre une livraison: guides/examples/track-delivery.md
+      - Intégration Postman: guides/postman/postman-tests.md
+  - Déploiement:
+      - Démo locale: deploy/local.md
+      - CI/CD avec GitHub Actions: deploy/github-actions.md
+  - Référence:
+      - reference/index.md
+      - Référence API: reference/api/openapi.md
+      - FAQ: reference/faq.md
+      - Changelog: reference/changelog.md
+  - À propos de RestoKit: about.md
+
